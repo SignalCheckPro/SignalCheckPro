@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>SignalCheck Pro 3.0</title>
+
+  <!-- PWA Manifest & Theme -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1c2331">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+  
+  <main id="app-container">
+    <header>
+      <h1>SignalCheck Pro 3.0</h1>
+      <p>Herramienta PWA de Calibración y Certificación de Instrumentos</p>
+    </header>
+
+    <!-- Paso 1: Hoja de Datos del Instrumento -->
+    <section id="step-1-datasheet" class="app-step active">
+      <form id="instrumentForm">
+        <fieldset>
+          <legend><h2>Paso 1: Hoja de Datos del Instrumento</h2></legend>
+          <div class="input-grid">
+            <div class="input-group">
+              <label for="tag">TAG del Instrumento</label>
+              <input type="text" id="tag" required placeholder="Ej: PT-101A" value="PT-101A">
+            </div>
+            <div class="input-group">
+              <label for="brand">Marca</label>
+              <input type="text" id="brand" required placeholder="Ej: Rosemount" value="Rosemount">
+            </div>
+            <div class="input-group">
+              <label for="model">Modelo</label>
+              <input type="text" id="model" required placeholder="Ej: 3051S" value="3051S">
+            </div>
+            <div class="input-group">
+              <label for="power">Alimentación</label>
+              <input type="text" id="power" required placeholder="Ej: 24 VDC" value="24 VDC">
+            </div>
+            <div class="input-group">
+              <label for="lrv">Valor Mínimo (LRV)</label>
+              <input type="number" id="lrv" step="any" required placeholder="Ej: 0" value="0">
+            </div>
+            <div class="input-group">
+              <label for="urv">Valor Máximo (URV)</label>
+              <input type="number" id="urv" step="any" required placeholder="Ej: 100" value="100">
+            </div>
+            <div class="input-group">
+              <label for="pvUnit">Unidad de PV</label>
+              <input type="text" id="pvUnit" required placeholder="Ej: psi, bar, °C" value="PSI">
+            </div>
+            <div class="input-group">
+                <label for="tolerance">Tolerancia Aceptable (%)</label>
+                <input type="number" id="tolerance" step="any" required placeholder="Ej: 0.5" value="0.5">
+            </div>
+            <div class="input-group">
+              <label for="calibrator">Equipo de Calibración</label>
+              <input type="text" id="calibrator" required placeholder="Ej: Fluke 754" value="Fluke 754">
+            </div>
+            <div class="input-group">
+              <label for="technician">Técnico de la prueba</label>
+              <input type="text" id="technician" required placeholder="Ej: Juan Pérez" value="Juan Pérez">
+            </div>
+          </div>
+        </fieldset>
+        <button type="submit" class="btn-primary">Iniciar Calibración</button>
+      </form>
+    </section>
+
+    <!-- Paso 2: Prueba de Calibración y Validación -->
+    <section id="step-2-calibration" class="app-step">
+        <h2>Paso 2: Prueba de Calibración en 5 Puntos</h2>
+        <p>Ingrese los valores medidos en campo para cada punto de referencia.</p>
+        <div id="calibration-table-container">
+            <table id="calibration-table">
+            <thead>
+                <tr>
+                <th scope="col">Punto</th>
+                <th scope="col">0%</th>
+                <th scope="col">25%</th>
+                <th scope="col">50%</th>
+                <th scope="col">75%</th>
+                <th scope="col">100%</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="ideal-values-row">
+                <td><strong>Ideal (Ref.) (<span id="ideal-unit"></span>)</strong></td>
+                <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                </tr>
+                <tr id="measured-values-row">
+                <td><strong>Medido (<span id="measured-unit"></span>)</strong></td>
+                <td><input type="number" step="any" class="measured-input" required></td>
+                <td><input type="number" step="any" class="measured-input" required></td>
+                <td><input type="number" step="any" class="measured-input" required></td>
+                <td><input type="number" step="any" class="measured-input" required></td>
+                <td><input type="number" step="any" class="measured-input" required></td>
+                </tr>
+                <tr id="error-values-row" class="hidden">
+                <td><strong>Error</strong></td>
+                <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+        <div class="button-group">
+            <button id="validateBtn" class="btn-primary">Validar y Ver Resultados</button>
+            <button id="backToDataBtn" class="btn-secondary">Volver a Datos</button>
+        </div>
+    </section>
+
+    <!-- Paso 3: Resultados y Generación de Reporte -->
+    <section id="step-3-report" class="app-step">
+      <h2>Paso 3: Resultados y Reporte</h2>
+      <div id="summary-card">
+        <h3>Resumen de la Calibración</h3>
+        <p><strong>TAG:</strong> <span id="summary-tag"></span></p>
+        <p><strong>Resultado:</strong> <span id="summary-result"></span></p>
+        <p><strong>Fecha:</strong> <span id="summary-date"></span></p>
+        <div class="chart-container">
+          <canvas id="chart"></canvas>
+        </div>
+        <p id="summary-equation" class="hidden"></p>
+      </div>
+      <div class="button-group-vertical">
+        <button id="generatePdfBtn" class="btn-export">
+            <span class="btn-text">Generar Reporte PDF</span>
+            <div class="spinner hidden"></div>
+        </button>
+        <button id="fullResetBtn" class="btn-secondary">Iniciar Nueva Prueba</button>
+      </div>
+    </section>
+
+    <div id="error-message" class="hidden" aria-live="polite"></div>
+  </main>
+  
+  <!-- Librerías JS Externas (Cargadas al final y de forma asíncrona) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" defer></script>
+
+  <!-- Módulos de la Aplicación -->
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>
