@@ -50,10 +50,10 @@ export function calculateErrors(idealPoints, measuredPoints) {
 
 /**
  * Verifica si todos los errores están dentro del umbral de tolerancia.
- * @param {number[]} errors - Array de errores.
- * @param {number} errorThreshold - El valor máximo de error permitido.
- * @returns {boolean} True si es aprobado, false si es rechazado.
+ * @param {number[]} errors - Array de errores calculados.
+ * @param {number} errorThreshold - El umbral de error permitido.
+ * @returns {boolean} True si todos los errores están dentro del umbral, false si no.
  */
-export function checkIsApproved(errors, errorThreshold) {
+export function checkErrors(errors, errorThreshold) {
     return errors.every(error => Math.abs(error) <= errorThreshold);
 }

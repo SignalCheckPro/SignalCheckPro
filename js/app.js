@@ -11,6 +11,7 @@ import { generatePDF } from './pdfGenerator.js';
 function main() {
     registerEventListeners();
     registerPWA();
+    UIManager.resetUI(); // Asegura que la UI se reinicie al cargar la página
 }
 
 /**
@@ -35,8 +36,12 @@ function registerPWA() {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/service-worker.js')
-                .then(registration => console.log('Service Worker registrado con éxito:', registration))
-                .catch(error => console.log('Error en el registro del Service Worker:', error));
+                .then(reg => {
+                    console.log('Service Worker registrado con éxito:', reg);
+                })
+                .catch(err => {
+                    console.error('Fallo en el registro del Service Worker:', err);
+                });
         });
     }
 }
@@ -44,83 +49,87 @@ function registerPWA() {
 // --- MANEJADORES DE EVENTOS ---
 
 /**
- * Maneja el envío del formulario de datos del instrumento.
+ * Maneja el envío del formulario del Paso 1.
+ * @param {Event} event - El evento de envío del formulario.
  */
-function handleInstrumentFormSubmit(e) {
-    e.preventDefault();
-    UIManager.hideError();
-
-    if (!validateLrvUrv()) return;
+function handleInstrumentFormSubmit(event) {
+    event.preventDefault();
+    const formData = new FormData(UIManager.elements.instrumentForm);
+    const instrumentData = Object.fromEntries(formData.entries());
     
-    const instrumentData = UIManager.getInstrumentData();
-    const span = instrumentData.urv - instrumentData.lrv;
-    const errorThreshold = span * (instrumentData.tolerance / 100);
+    // Convertir LRV y URV a números y validar
+    instrumentData.lrv = parseFloat(instrumentData.lrv);
+    instrumentData.urv = parseFloat(instrumentData.urv);
+    instrumentData.errorThreshold = parseFloat(instrumentData.errorThreshold);
 
-    updateState({ instrumentData, span, errorThreshold });
+    // Si la validación en tiempo real falló, no continuar
+    if (!validateLrvUrv()) {
+        return;
+    }
 
-    const { lrv, urv, pvUnit } = instrumentData;
-    const idealPoints = CalibrationEngine.calculateCalibrationPoints(lrv, urv);
-    const equation = CalibrationEngine.calculateLinearEquation(lrv, urv);
-    
+    const idealPoints = CalibrationEngine.calculateCalibrationPoints(instrumentData.lrv, instrumentData.urv);
+
     updateState({ 
-        calibrationData: { ...getState().calibrationData, ideal: idealPoints },
-        equation
+        instrumentData: instrumentData,
+        calibrationData: { ideal: idealPoints, measured: [], errors: [] },
+        errorThreshold: instrumentData.errorThreshold
     });
-    
-    UIManager.renderCalibrationTable(idealPoints, pvUnit);
+
+    UIManager.displayIdealValues(idealPoints, instrumentData.unit);
     UIManager.navigateToStep('step2');
 }
 
 /**
- * Maneja la validación de los datos de calibración.
+ * Maneja la validación y el cálculo de los datos de calibración.
  */
 function handleValidation() {
-    if (!UIManager.validateMeasuredInputs()) {
-        UIManager.showError('Por favor, ingrese todos los valores medidos en campo.');
-        return;
+    try {
+        const state = getState();
+        const measuredValues = Array.from(UIManager.elements.measuredInputs).map(input => parseFloat(input.value));
+        const idealPoints = state.calibrationData.ideal;
+        
+        // Validación de entradas
+        if (measuredValues.some(isNaN)) {
+            UIManager.showError('Por favor, ingrese todos los valores medidos.');
+            return;
+        }
+
+        const errors = CalibrationEngine.calculateErrors(idealPoints, measuredValues);
+        const isApproved = CalibrationEngine.checkErrors(errors, state.errorThreshold);
+        
+        const equation = CalibrationEngine.calculateLinearEquation(state.instrumentData.lrv, state.instrumentData.urv);
+
+        // Actualizar estado con los nuevos datos
+        updateState({
+            calibrationData: {
+                ideal: idealPoints,
+                measured: measuredValues,
+                errors: errors
+            },
+            isApproved: isApproved,
+            equation: equation
+        });
+
+        // Actualizar la UI
+        UIManager.displayErrorValues(errors);
+        UIManager.updateSummary(getState());
+        UIManager.updateChart(getState());
+        UIManager.navigateToStep('step3');
+
+    } catch (error) {
+        console.error("Error en la validación o cálculo:", error);
+        UIManager.showError('Ocurrió un error inesperado al validar los datos.');
     }
-    UIManager.hideError();
-
-    const measuredPoints = UIManager.getMeasuredData();
-    const { ideal } = getState().calibrationData;
-    const { errorThreshold } = getState();
-    
-    const errors = CalibrationEngine.calculateErrors(ideal, measuredPoints);
-    const isApproved = CalibrationEngine.checkIfApproved(errors, errorThreshold);
-
-    updateState({
-        calibrationData: { ...getState().calibrationData, measured: measuredPoints, errors },
-        isApproved
-    });
-
-    UIManager.renderErrors(errors, errorThreshold);
-    prepareAndShowReport();
-    UIManager.navigateToStep('step3');
 }
 
-/**
- * Prepara los datos y actualiza la UI para el reporte final.
- */
-function prepareAndShowReport() {
-    const { instrumentData, isApproved, equation } = getState();
-    const summaryData = {
-        tag: instrumentData.tag,
-        isApproved,
-        date: new Date().toLocaleString(),
-        equation: equation.formatted
-    };
-    UIManager.updateReportView(summaryData);
-    UIManager.updateChart(instrumentData);
-}
 
 /**
  * Maneja la generación del PDF.
+ * Muestra un loader y genera el PDF de forma asíncrona.
  */
 async function handlePdfGeneration() {
     UIManager.toggleLoader(UIManager.elements.generatePdfBtn, true);
     try {
-        // Usamos un pequeño delay para que el spinner sea visible y mejore la UX
-        await new Promise(resolve => setTimeout(resolve, 50)); 
         const state = getState();
         const chartInstance = UIManager.getChartInstance();
         generatePDF(state, chartInstance);
@@ -164,6 +173,4 @@ function validateLrvUrv() {
     return true;
 }
 
-
-// --- PUNTO DE ENTRADA DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', main);

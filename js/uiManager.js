@@ -28,145 +28,180 @@ export const elements = {
     },
     chartCanvas: document.getElementById('chart'),
     lrvInput: document.getElementById('lrv'),
-    urvInput: document.getElementById('urv'),
+    urvInput: document.getElementById('urv')
 };
 
 /**
- * Navega a un paso específico de la aplicación.
- * @param {string} stepName - El nombre de la clave en `elements.steps`.
+ * Navega a un paso específico de la aplicación, ocultando los demás.
+ * @param {string} stepId - El ID del paso al que se desea navegar (ej: 'step1').
  */
-export function navigateToStep(stepName) {
-    Object.values(elements.steps).forEach(step => step.classList.remove('active'));
-    elements.steps[stepName].classList.add('active');
-    window.scrollTo(0, 0);
+export function navigateToStep(stepId) {
+    for (const step in elements.steps) {
+        if (elements.steps[step]) {
+            elements.steps[step].classList.remove('active');
+        }
+    }
+    if (elements.steps[stepId]) {
+        elements.steps[stepId].classList.add('active');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /**
- * Muestra un mensaje de error.
- * @param {string} message - El mensaje a mostrar.
+ * Muestra los valores ideales calculados en la tabla de calibración.
+ * @param {number[]} values - Un array con los valores ideales.
+ * @param {string} unit - La unidad de medida.
+ */
+export function displayIdealValues(values, unit) {
+    elements.idealValuesCells.forEach((cell, index) => {
+        cell.textContent = values[index].toFixed(2);
+    });
+    elements.idealUnitSpan.textContent = unit;
+    elements.measuredUnitSpan.textContent = unit;
+}
+
+/**
+ * Muestra los errores calculados en la tabla de calibración y los colorea.
+ * @param {number[]} errors - Un array con los errores.
+ */
+export function displayErrorValues(errors) {
+    document.getElementById('error-values-row').classList.remove('hidden');
+    elements.errorValuesCells.forEach((cell, index) => {
+        const error = errors[index];
+        cell.textContent = error.toFixed(2);
+        cell.className = '';
+        if (Math.abs(error) > 0) {
+            cell.classList.add('error-fail');
+        } else {
+            cell.classList.add('error-ok');
+        }
+    });
+}
+
+/**
+ * Muestra un mensaje de error en la UI.
+ * @param {string} message - El mensaje de error a mostrar.
  */
 export function showError(message) {
     elements.errorMessageDiv.textContent = message;
     elements.errorMessageDiv.classList.remove('hidden');
 }
 
-/** Oculta el mensaje de error. */
+/**
+ * Oculta el mensaje de error de la UI.
+ */
 export function hideError() {
+    elements.errorMessageDiv.textContent = '';
     elements.errorMessageDiv.classList.add('hidden');
 }
 
 /**
- * Obtiene los datos del formulario del instrumento.
- * @returns {object} - Datos del instrumento.
+ * Actualiza la información de resumen en el paso 3.
+ * @param {object} state - El estado de la aplicación.
  */
-export function getInstrumentData() {
-    return {
-        tag: document.getElementById('tag').value,
-        brand: document.getElementById('brand').value,
-        model: document.getElementById('model').value,
-        power: document.getElementById('power').value,
-        lrv: parseFloat(elements.lrvInput.value),
-        urv: parseFloat(elements.urvInput.value),
-        pvUnit: document.getElementById('pvUnit').value,
-        tolerance: parseFloat(document.getElementById('tolerance').value),
-        calibrator: document.getElementById('calibrator').value,
-        technician: document.getElementById('technician').value
-    };
+export function updateSummary(state) {
+    const { tag, brand, model } = state.instrumentData;
+    const { equation, isApproved } = state;
+
+    elements.summary.tag.textContent = tag || '-';
+    elements.summary.result.textContent = isApproved ? 'APROBADO' : 'RECHAZADO';
+    elements.summary.result.classList.remove('error-ok', 'error-fail');
+    elements.summary.result.classList.add(isApproved ? 'error-ok' : 'error-fail');
+    elements.summary.date.textContent = new Date().toLocaleDateString();
+
+    if (equation && equation.formatted) {
+        elements.summary.equation.textContent = equation.formatted;
+        elements.summary.equation.classList.remove('hidden');
+    } else {
+        elements.summary.equation.classList.add('hidden');
+    }
 }
 
 /**
- * Obtiene los valores medidos de los inputs.
- * @returns {number[]} - Array de valores medidos.
+ * Actualiza o crea el gráfico de Chart.js.
+ * @param {object} state - El estado de la aplicación.
  */
-export function getMeasuredData() {
-    return Array.from(elements.measuredInputs).map(input => parseFloat(input.value));
-}
-
-/**
- * Valida que todos los inputs de medición tengan un valor numérico.
- * @returns {boolean} - True si todos son válidos.
- */
-export function validateMeasuredInputs() {
-    return Array.from(elements.measuredInputs).every(input => input.value !== '' && !isNaN(parseFloat(input.value)));
-}
-
-/**
- * Renderiza los valores ideales en la tabla de calibración.
- * @param {number[]} idealPoints - Array de valores ideales.
- * @param {string} pvUnit - Unidad de la variable de proceso.
- */
-export function renderCalibrationTable(idealPoints, pvUnit) {
-    elements.idealValuesCells.forEach((cell, index) => {
-        cell.textContent = parseFloat(idealPoints[index].toPrecision(6));
-    });
-    elements.idealUnitSpan.textContent = pvUnit;
-    elements.measuredUnitSpan.textContent = pvUnit;
-}
-
-/**
- * Renderiza los errores calculados en la tabla.
- * @param {number[]} errors - Array de errores.
- * @param {number} errorThreshold - Umbral de tolerancia.
- */
-export function renderErrors(errors, errorThreshold) {
-    document.getElementById('error-values-row').classList.remove('hidden');
-    elements.errorValuesCells.forEach((cell, index) => {
-        const error = errors[index];
-        cell.textContent = parseFloat(error.toPrecision(6));
-        cell.classList.remove('error-ok', 'error-fail');
-        cell.classList.add(Math.abs(error) <= errorThreshold ? 'error-ok' : 'error-fail');
-    });
-}
-
-/**
- * Actualiza la vista del reporte final.
- * @param {object} summaryData - Datos para el resumen.
- */
-export function updateReportView({ tag, isApproved, date, equation }) {
-    elements.summary.tag.textContent = tag;
-    elements.summary.date.textContent = date;
-    const resultSpan = elements.summary.result;
-    resultSpan.textContent = isApproved ? 'APROBADO (Dentro de Tolerancia)' : 'RECHAZADO (Fuera de Tolerancia)';
-    resultSpan.className = isApproved ? 'error-ok' : 'error-fail';
-    
-    elements.summary.equation.textContent = equation;
-    elements.summary.equation.classList.remove('hidden');
-}
-
-/**
- * Actualiza o crea el gráfico de resultados.
- * @param {object} instrumentData - Datos del instrumento (lrv, urv, pvUnit).
- */
-export function updateChart({ lrv, urv, pvUnit }) {
-    if (chartInstance) chartInstance.destroy();
+export function updateChart(state) {
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
     
     const ctx = elements.chartCanvas.getContext('2d');
-    chartInstance = new Chart(ctx, {
+    const { lrv, urv, unit } = state.instrumentData;
+    const { ideal, measured } = state.calibrationData;
+
+    const data = {
+        labels: ideal.map(val => `${val.toFixed(2)} ${unit}`),
+        datasets: [{
+            label: 'Valores Ideales',
+            data: ideal,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1,
+            pointBackgroundColor: 'rgb(75, 192, 192)',
+            pointBorderColor: 'rgb(75, 192, 192)',
+            fill: false,
+            pointRadius: 6
+        }, {
+            label: 'Valores Medidos',
+            data: measured,
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1,
+            pointBackgroundColor: 'rgb(255, 99, 132)',
+            pointBorderColor: 'rgb(255, 99, 132)',
+            fill: false,
+            pointRadius: 6
+        }]
+    };
+
+    const config = {
         type: 'line',
-        data: {
-            datasets: [{
-                label: 'Comportamiento Ideal (4-20mA)',
-                data: [{x: lrv, y: 4}, {x: urv, y: 20}],
-                borderColor: '#2AFAFA',
-                backgroundColor: '#2AFAFA',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.1
-            }]
-        },
+        data: data,
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                x: { type: 'linear', title: { display: true, text: `Valor de Proceso (${pvUnit})`, color: '#333' }, ticks: { color: '#333' } },
-                y: { min: 0, max: 24, title: { display: true, text: 'Corriente (mA)', color: '#333' }, ticks: { color: '#333', stepSize: 4 } }
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Puntos de Calibración',
+                        color: 'rgba(255, 255, 255, 0.8)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: `Valores (${unit})`,
+                        color: 'rgba(255, 255, 255, 0.8)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
             },
-            plugins: { legend: { labels: { color: '#333' } } }
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'rgba(255, 255, 255, 0.9)'
+                    }
+                }
+            }
         }
-    });
+    };
+    chartInstance = new Chart(ctx, config);
 }
 
 /**
  * Devuelve la instancia actual del gráfico.
- * @returns {Chart} - La instancia del gráfico.
+ * @returns {Chart|null} La instancia de Chart.js o null si no existe.
  */
 export function getChartInstance() {
     return chartInstance;
@@ -206,9 +241,11 @@ export function resetUI() {
     elements.summary.result.textContent = '';
     elements.summary.date.textContent = '';
     elements.summary.equation.classList.add('hidden');
+    elements.lrvInput.classList.remove('input-error');
+    elements.urvInput.classList.remove('input-error');
+    hideError();
     if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
     }
-    hideError();
 }

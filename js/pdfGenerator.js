@@ -24,53 +24,46 @@ export function generatePDF(state, chartInstance) {
         head: [['Parámetro', 'Valor']],
         body: [
             ['TAG', instrumentData.tag], ['Marca', instrumentData.brand], ['Modelo', instrumentData.model],
-            ['Alimentación', instrumentData.power], ['Rango', `${instrumentData.lrv} a ${instrumentData.urv} ${instrumentData.pvUnit}`],
-            ['Tolerancia Aceptada', `± ${errorThreshold.toFixed(3)} ${instrumentData.pvUnit} (${instrumentData.tolerance}%)`],
-            ['Equipo de Calibración', instrumentData.calibrator], ['Técnico', instrumentData.technician]
+            ['Alimentación', instrumentData.power], ['Tipo', instrumentData.type],
+            ['Unidad', instrumentData.unit], ['Rango', `${instrumentData.lrv} a ${instrumentData.urv}`],
+            ['Umbral de Error', `${errorThreshold}`]
         ],
-        theme: 'striped', headStyles: { fillColor: [42, 56, 76] }, margin: { left: 14, right: 14 }
+        theme: 'striped',
+        styles: { fontSize: 9, cellPadding: 2, textColor: [33, 33, 33] },
+        headStyles: { fillColor: [42, 56, 76], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [240, 240, 240] }
     });
-
-    let finalY = doc.lastAutoTable.finalY;
     
-    // --- Resultados de la Prueba ---
+    let finalY = doc.autoTable.previous.finalY + 10;
+    
+    // --- Puntos de Calibración ---
     doc.setFontSize(12);
-    doc.text("2. Resultados de la Prueba de 5 Puntos", 14, finalY + 10);
-    
-    const tableBody = calibrationData.ideal.map((ideal, index) => [
-        `${index * 25}%`,
-        parseFloat(ideal.toPrecision(6)),
-        parseFloat(calibrationData.measured[index].toPrecision(6)),
-        parseFloat(calibrationData.errors[index].toPrecision(6))
-    ]);
-
+    doc.text("2. Puntos de Calibración", 14, finalY);
+    finalY += 3;
     doc.autoTable({
-        startY: finalY + 13,
-        head: [['Punto', `Ideal (${instrumentData.pvUnit})`, `Medido (${instrumentData.pvUnit})`, `Error (${instrumentData.pvUnit})`]],
-        body: tableBody,
-        theme: 'grid', headStyles: { fillColor: [42, 56, 76] }, margin: { left: 14, right: 14 },
-        didDrawCell: (data) => {
-            if (data.column.index === 3 && data.cell.section === 'body') {
-                const errorValue = Math.abs(parseFloat(data.cell.text[0]));
-                const failColor = [220, 53, 69];
-                const okColor = [40, 167, 69];
-                const isFail = errorValue > errorThreshold;
-                
-                doc.setFillColor(...(isFail ? failColor : okColor));
-                doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.text(data.cell.text[0], data.cell.x + data.cell.padding('left'), data.cell.y + data.cell.height / 2, { baseline: 'middle' });
-            }
-        }
+        startY: finalY,
+        head: [['Punto', `Ideal (${instrumentData.unit})`, `Medido (${instrumentData.unit})`, `Error (${instrumentData.unit})`]],
+        body: calibrationData.ideal.map((ideal, index) => [
+            `${(index / 4) * 100}%`,
+            ideal.toFixed(2),
+            calibrationData.measured[index] ? calibrationData.measured[index].toFixed(2) : 'N/A',
+            calibrationData.errors[index] ? calibrationData.errors[index].toFixed(2) : 'N/A'
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 9, cellPadding: 2, textColor: [33, 33, 33] },
+        headStyles: { fillColor: [42, 56, 76], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [240, 240, 240] }
     });
 
-    finalY = doc.lastAutoTable.finalY;
+    finalY = doc.autoTable.previous.finalY + 10;
 
-    // --- Conclusión ---
+    // --- Resumen del Resultado ---
     doc.setFontSize(12);
-    doc.text("3. Conclusión", 14, finalY + 10);
-    doc.setFontSize(11);
-    doc.setTextColor(isApproved ? 40 : 220, isApproved ? 167 : 53, isApproved ? 69 : 69);
+    doc.text("3. Resumen del Resultado", 14, finalY);
+    finalY += 5;
+    const resultColor = isApproved ? [40, 167, 69] : [220, 53, 69];
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(resultColor[0], resultColor[1], resultColor[2]);
     doc.text(`Resultado: ${isApproved ? 'APROBADO' : 'RECHAZADO'}`, 14, finalY + 16);
     doc.setTextColor(0, 0, 0);
     finalY += 20;
@@ -98,11 +91,10 @@ export function generatePDF(state, chartInstance) {
     // --- Firma y Pie de página (siempre al final) ---
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(10);
-    doc.text("_________________________", 14, pageHeight - 30);
-    doc.text(`Firma del Técnico: ${instrumentData.technician}`, 14, pageHeight - 25);
+    doc.text("_________________________", 14, pageHeight - 20);
+    doc.text("Firma del Técnico", 14, pageHeight - 15);
     doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text("La validez de este reporte está sujeta a las condiciones del instrumento al momento de la prueba.", doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: "center" });
+    doc.text("Generado con SignalCheck Pro 3.0", doc.internal.pageSize.getWidth() - 14, pageHeight - 10, { align: 'right' });
 
-    doc.save(`Reporte_Calibracion_${instrumentData.tag}.pdf`);
+    doc.save('reporte_calibracion.pdf');
 }

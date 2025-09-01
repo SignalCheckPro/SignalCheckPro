@@ -31,90 +31,103 @@
           <div class="input-grid">
             <div class="input-group">
               <label for="tag">TAG del Instrumento</label>
-              <input type="text" id="tag" required placeholder="Ej: PT-101A" value="PT-101A">
+              <input type="text" id="tag" required placeholder="Ej: PT-101">
             </div>
             <div class="input-group">
               <label for="brand">Marca</label>
-              <input type="text" id="brand" required placeholder="Ej: Rosemount" value="Rosemount">
+              <input type="text" id="brand" required placeholder="Ej: Siemens">
             </div>
             <div class="input-group">
               <label for="model">Modelo</label>
-              <input type="text" id="model" required placeholder="Ej: 3051S" value="3051S">
+              <input type="text" id="model" required placeholder="Ej: 335">
             </div>
             <div class="input-group">
               <label for="power">Alimentación</label>
-              <input type="text" id="power" required placeholder="Ej: 24 VDC" value="24 VDC">
+              <input type="text" id="power" required placeholder="Ej: 24 VDC">
             </div>
             <div class="input-group">
-              <label for="lrv">Valor Mínimo (LRV)</label>
-              <input type="number" id="lrv" step="any" required placeholder="Ej: 0" value="0">
+              <label for="type">Tipo de Instrumento</label>
+              <input type="text" id="type" required placeholder="Ej: Presión">
             </div>
             <div class="input-group">
-              <label for="urv">Valor Máximo (URV)</label>
-              <input type="number" id="urv" step="any" required placeholder="Ej: 100" value="100">
+              <label for="unit">Unidad de Medida</label>
+              <input type="text" id="unit" required placeholder="Ej: psi, bar, %">
             </div>
             <div class="input-group">
-              <label for="pvUnit">Unidad de PV</label>
-              <input type="text" id="pvUnit" required placeholder="Ej: psi, bar, °C" value="PSI">
+              <label for="lrv">Valor Mínimo del Rango (LRV)</label>
+              <input type="number" id="lrv" required placeholder="Ej: 0">
             </div>
             <div class="input-group">
-                <label for="tolerance">Tolerancia Aceptable (%)</label>
-                <input type="number" id="tolerance" step="any" required placeholder="Ej: 0.5" value="0.5">
+              <label for="urv">Valor Máximo del Rango (URV)</label>
+              <input type="number" id="urv" required placeholder="Ej: 100">
             </div>
             <div class="input-group">
-              <label for="calibrator">Equipo de Calibración</label>
-              <input type="text" id="calibrator" required placeholder="Ej: Fluke 754" value="Fluke 754">
-            </div>
-            <div class="input-group">
-              <label for="technician">Técnico de la prueba</label>
-              <input type="text" id="technician" required placeholder="Ej: Juan Pérez" value="Juan Pérez">
+              <label for="errorThreshold">Umbral de Error Máx. (%)</label>
+              <input type="number" id="errorThreshold" step="0.01" required placeholder="Ej: 0.5">
             </div>
           </div>
         </fieldset>
-        <button type="submit" class="btn-primary">Iniciar Calibración</button>
+        <div class="button-group-vertical">
+          <button type="submit" id="saveInstrumentBtn" class="btn-primary">Siguiente</button>
+        </div>
       </form>
     </section>
 
-    <!-- Paso 2: Prueba de Calibración y Validación -->
+    <!-- Paso 2: Puntos de Calibración -->
     <section id="step-2-calibration" class="app-step">
-        <h2>Paso 2: Prueba de Calibración en 5 Puntos</h2>
-        <p>Ingrese los valores medidos en campo para cada punto de referencia.</p>
-        <div id="calibration-table-container">
-            <table id="calibration-table">
-            <thead>
-                <tr>
-                <th scope="col">Punto</th>
-                <th scope="col">0%</th>
-                <th scope="col">25%</th>
-                <th scope="col">50%</th>
-                <th scope="col">75%</th>
-                <th scope="col">100%</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="ideal-values-row">
-                <td><strong>Ideal (Ref.) (<span id="ideal-unit"></span>)</strong></td>
-                <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                </tr>
-                <tr id="measured-values-row">
-                <td><strong>Medido (<span id="measured-unit"></span>)</strong></td>
-                <td><input type="number" step="any" class="measured-input" required></td>
-                <td><input type="number" step="any" class="measured-input" required></td>
-                <td><input type="number" step="any" class="measured-input" required></td>
-                <td><input type="number" step="any" class="measured-input" required></td>
-                <td><input type="number" step="any" class="measured-input" required></td>
-                </tr>
-                <tr id="error-values-row" class="hidden">
-                <td><strong>Error</strong></td>
-                <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                </tr>
-            </tbody>
-            </table>
-        </div>
-        <div class="button-group">
-            <button id="validateBtn" class="btn-primary">Validar y Ver Resultados</button>
-            <button id="backToDataBtn" class="btn-secondary">Volver a Datos</button>
-        </div>
+      <div id="calibration-table-container">
+        <h2>Paso 2: Registro de Datos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>%</th>
+              <th>Ideal (<span id="ideal-unit"></span>)</th>
+              <th>Medido (<span id="measured-unit"></span>)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0%</td>
+              <td class="ideal-value">0.0</td>
+              <td><input type="number" class="measured-input" required step="0.01"></td>
+            </tr>
+            <tr>
+              <td>25%</td>
+              <td class="ideal-value">0.0</td>
+              <td><input type="number" class="measured-input" required step="0.01"></td>
+            </tr>
+            <tr>
+              <td>50%</td>
+              <td class="ideal-value">0.0</td>
+              <td><input type="number" class="measured-input" required step="0.01"></td>
+            </tr>
+            <tr>
+              <td>75%</td>
+              <td class="ideal-value">0.0</td>
+              <td><input type="number" class="measured-input" required step="0.01"></td>
+            </tr>
+            <tr>
+              <td>100%</td>
+              <td class="ideal-value">0.0</td>
+              <td><input type="number" class="measured-input" required step="0.01"></td>
+            </tr>
+            <!-- Fila para mostrar los errores -->
+            <tr id="error-values-row" class="hidden">
+              <td class="table-header">Error</td>
+              <td></td>
+              <td class="error-value"></td>
+              <td class="error-value"></td>
+              <td class="error-value"></td>
+              <td class="error-value"></td>
+              <td class="error-value"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="button-group-vertical">
+        <button id="validateBtn" class="btn-primary">Validar y Ver Resultados</button>
+        <button id="backToDataBtn" class="btn-secondary">Volver a Datos del Instrumento</button>
+      </div>
     </section>
 
     <!-- Paso 3: Resultados y Generación de Reporte -->
@@ -145,9 +158,9 @@
   <!-- Librerías JS Externas (Cargadas al final y de forma asíncrona) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js" defer></script>
 
-  <!-- Módulos de la Aplicación -->
-  <script src="js/app.js" type="module"></script>
+  <!-- Archivos de la Aplicación -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>

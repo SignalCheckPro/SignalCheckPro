@@ -1,14 +1,40 @@
-Soldador
-Colombia (cesar)
+const CACHE_NAME = 'signalcheck-pro-v1';
+const urlsToCache = [
+    '/',
+    '/index.html',
+    '/style.css',
+    '/app.js',
+    '/calibrationEngine.js',
+    '/pdfGenerator.js',
+    '/stateManager.js',
+    '/uiManager.js',
+    '/manifest.json',
+    'https://cdn.jsdelivr.net/npm/chart.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js'
+];
 
-Arret de travail hace 2 meses y medio.
-Medico se tomó medicamentos.
-Esposa del jefe sirvió de traductor... y colocó información no adecuada.
+self.addEventListener('install', (event) => {
+    console.log('Service Worker: Instalando...');
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+        .then((cache) => {
+            console.log('Service Worker: Cacheando archivos');
+            return cache.addAll(urlsToCache);
+        })
+    );
+});
 
-Contratación directa de la empresa
-
-Actualmente vive en Wickham.
-
-Enero 2021 a enero 2024
-Enero de 2024 a enero 2026
-
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request)
+        .then((response) => {
+            // Devuelve el archivo en caché si lo encuentra
+            if (response) {
+                return response;
+            }
+            // Si no lo encuentra, realiza la solicitud de red
+            return fetch(event.request);
+        })
+    );
+});
